@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Map</title>
+    <script src="https://js.arcgis.com/4.23/"></script>
+    <style>
+        #viewDiv {
+            width: 100%;
+            height: 100vh;
+        }
+
+        /* Style for the custom popup */
+        #customPopup {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 1px solid #000;
+            padding: 15px;
+            display: none;
+            max-width: 300px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Adding some custom styles for the temperature */
+        .temperature {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #FF5733;
+        }
+
+        /* Adding some styles for weather icons */
+        .weather-icon {
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+        }
+
+        h3 {
+            font-size: 1.5em;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div id="viewDiv"></div>
+    <div id="customPopup"></div> <!-- Custom Popup Div -->
+
+    <script>
+        require([
+            "esri/Map",
+            "esri/views/MapView",
+            "esri/WebMap",
+            "esri/geometry/Point",
+            "dojo/on",
+            "dojo/dom",
+            "dojo/dom-construct"
+        ], function(Map, MapView, WebMap, Point, on, dom, domConstruct) {
+
+            const webMapId = "ed7c689252ab4b6fa59ae59916da86c5";  // Your WebMap ID
+            const webMap = new WebMap({
+                portalItem: { id: webMapId }
+            });
+
+            const view = new MapView({
+                container: "viewDiv",  // The div where the map should render
+                map: webMap
+            });
+
+            view.when().then(function() {
+                console.log("Map loaded successfully");
+            }).catch(function(error) {
+                console.error("Error loading map:", error);
+            });
+
+            // Function to fetch weather data from OpenWeatherMap API
+            async function getWeather(lat, lon) {
+                const apiUrl = `http://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=0e1546af515b6f285b86312e28829a22`;
+
+                try {
+                    const response = await fetch(apiUrl);
+                    const data = await response.json();
+                    console.log("Weather data:", data);  // Log the weather data for debugging
+                    return data;
+                } catch (err) {
+                    console.error("Error fetching weather data:", err);
+                    return null;
+                }
+            }
+
+            // Function to get the user's location and center the map
+            function setUserLocation() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function(position) {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        const accuracy = position.coords.accuracy; // The accuracy of the position
+
+                        console.log("User location: ", lat, lon, "Accuracy: ", accuracy);
+
+                        // Ensure that the location's accuracy is good enough (within 500 meters)
+                        if (accuracy <= 500) {
+                            // Center the map to the user's location
+                            view.goTo({
+                                center: [lon, lat],
+                                zoom: 12  // Adjusted zoom level for better user location visualization
+                            }).then(function() {
+                                console.log("Map centered on user location");
+                                // Fetch weather data for the user's location
+                                getWeather(lat, lon).then(weatherData => {
+                                    if (weatherData) {
+                                        const tempCelsius = weatherData.main.temp - 273.15;  // Convert Kelvin to Celsius
+                                        const tempFahrenheit = (tempCelsius * 9/5) + 32;  // Convert Celsius to Fahrenheit
+                                        const weatherDescription = weatherData.weather[0].description;
+                                        const humidity = weatherData.main.humidity;
+                                        const locationName = weatherData.name;  // Get the location name (city name)
+                                        const iconUrl = `http://openweathermap.org/img/w/${weatherData.weather[0].icon}.png`; // Weather icon URL
+
+                                        // Create the content for the custom popup with weather information
+                                        const content = `
+                                            <div style="display: flex; align-items: center;">
+                                                <img src="${iconUrl}" alt="Weather Icon" class="weather-icon" />
+                                                <div>
+                                                    <h3>Weather Information</h3>
+                                                    <p>Location: ${locationName}</p>
+                                                    <p class="temperature">Temperature: ${tempCelsius.toFixed(2)}°C (${tempFahrenheit.toFixed(2)}°F)</p>
+                                                    <p>Condition: ${weatherDescription}</p>
+                                                    <p>Humidity: ${humidity}%</p>
+                                                </div>
+                                            </div>
+                                        `;
+
+                                        // Get the custom popup div
+                                        const customPopup = document.getElementById('customPopup');
+
+                                        // Set the content using innerHTML
+                                        customPopup.innerHTML = content;
+
+                                        // Position the popup based on the center of the map
+                                        customPopup.style.left = `${view.width / 2 + 10}px`;
+                                        customPopup.style.top = `${view.height / 2 + 10}px`;
+
+                                        // Make the popup visible
+                                        customPopup.style.display = 'block';
+                                    }
+                                });
+                            });
+                        } else {
+                            console.warn("The geolocation accuracy is too low. Using default location.");
+                            // Set a default location (Stittsville, Ontario)
+                            const defaultLat = 45.2609;
+                            const defaultLon = -75.9203;
+                            view.goTo({
+                                center: [defaultLon, defaultLat],
+                                zoom: 12
+                            });
+                            // Fetch weather data for the default location
+                            getWeather(defaultLat, defaultLon).then(weatherData => {
+                                if (weatherData) {
+                                    const tempCelsius = weatherData.main.temp - 273.15;  // Convert Kelvin to Celsius
+                                    const tempFahrenheit = (tempCelsius * 9/5) + 32;  // Convert Celsius to Fahrenheit
+                                    const weatherDescription = weatherData.weather[0].description;
+                                    const humidity = weatherData.main.humidity;
+                                    const locationName = weatherData.name;  // Get the location name (city name)
+                                    const iconUrl = `http://openweathermap.org/img/w/${weatherData.weather[0].icon}.png`; // Weather icon URL
+
+                                    // Create the content for the custom popup with weather information
+                                    const content = `
+                                        <div style="display: flex; align-items: center;">
+                                            <img src="${iconUrl}" alt="Weather Icon" class="weather-icon" />
+                                            <div>
+                                                <h3>Weather Information</h3>
+                                                <p>Location: ${locationName}</p>
+                                                <p class="temperature">Temperature: ${tempCelsius.toFixed(2)}°C (${tempFahrenheit.toFixed(2)}°F)</p>
+                                                <p>Condition: ${weatherDescription}</p>
+                                                <p>Humidity: ${humidity}%</p>
+                                            </div>
+                                        </div>
+                                    `;
+
+                                    // Get the custom popup div
+                                    const customPopup = document.getElementById('customPopup');
+
+                                    // Set the content using innerHTML
+                                    customPopup.innerHTML = content;
+
+                                    // Position the popup based on the center of the map
+                                    customPopup.style.left = `${view.width / 2 + 10}px`;
+                                    customPopup.style.top = `${view.height / 2 + 10}px`;
+
+                                    // Make the popup visible
+                                    customPopup.style.display = 'block';
+                                }
+                            });
+                        }
+                    }, function(error) {
+                        console.error("Geolocation error: ", error);
+                    });
+                } else {
+                    alert("Geolocation is not supported by this browser.");
+                }
+            }
+
+            // Run the function to set user's location on page load
+            setUserLocation();
+
+            // Handle click event using Dojo's 'on' module
+            on(view, "click", function(event) {
+                const lat = event.mapPoint.latitude;
+                const lon = event.mapPoint.longitude;
+
+                console.log("Clicked coordinates:", lat, lon);  // Log the clicked coordinates
+
+                // Fetch weather data for the clicked location
+                getWeather(lat, lon).then(weatherData => {
+                    if (weatherData) {
+                        const tempCelsius = weatherData.main.temp - 273.15;  // Convert Kelvin to Celsius
+                        const tempFahrenheit = (tempCelsius * 9/5) + 32;  // Convert Celsius to Fahrenheit
+                        const weatherDescription = weatherData.weather[0].description;
+                        const humidity = weatherData.main.humidity;
+                        const locationName = weatherData.name;  // Get the location name (city name)
+                        const iconUrl = `http://openweathermap.org/img/w/${weatherData.weather[0].icon}.png`; // Weather icon URL
+
+                        // Create the content for the custom popup with weather information
+                        const content = `
+                            <div style="display: flex; align-items: center;">
+                                <img src="${iconUrl}" alt="Weather Icon" class="weather-icon" />
+                                <div>
+                                    <h3>Weather Information</h3>
+                                    <p>Location: ${locationName}</p>
+                                    <p class="temperature">Temperature: ${tempCelsius.toFixed(2)}°C (${tempFahrenheit.toFixed(2)}°F)</p>
+                                    <p>Condition: ${weatherDescription}</p>
+                                    <p>Humidity: ${humidity}%</p>
+                                </div>
+                            </div>
+                        `;
+
+                        // Get the custom popup div
+                        const customPopup = document.getElementById('customPopup');
+
+                        // Set the content using innerHTML
+                        customPopup.innerHTML = content;
+
+                        // Position the popup based on the center of the map
+                        customPopup.style.left = `${view.width / 2 + 10}px`;
+                        customPopup.style.top = `${view.height / 2 + 10}px`;
+
+                        // Make the popup visible
+                        customPopup.style.display = 'block';
+                    }
+                });
+            });
+
+        });
+    </script>
+</body>
+</html>
