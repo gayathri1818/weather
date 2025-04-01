@@ -77,7 +77,7 @@
 
             // Function to fetch weather data from OpenWeatherMap API
             async function getWeather(lat, lon) {
-                const apiUrl = `http://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=0e1546af515b6f285b86312e28829a22`;
+                const apiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=0e1546af515b6f285b86312e28829a22`;
 
                 try {
                     const response = await fetch(apiUrl);
@@ -125,7 +125,7 @@
                                                 <div>
                                                     <h3>Weather Information</h3>
                                                     <p>Location: ${locationName}</p>
-                                                    <p class="temperature">Temperature: ${tempCelsius.toFixed(2)}°C (${tempFahrenheit.toFixed(2)}°F)</p>
+                                                    <p class="temperature">Temperature: ${tempCelsius.toFixed(2)}ï¿½C (${tempFahrenheit.toFixed(2)}ï¿½F)</p>
                                                     <p>Condition: ${weatherDescription}</p>
                                                     <p>Humidity: ${humidity}%</p>
                                                 </div>
@@ -173,7 +173,7 @@
                                             <div>
                                                 <h3>Weather Information</h3>
                                                 <p>Location: ${locationName}</p>
-                                                <p class="temperature">Temperature: ${tempCelsius.toFixed(2)}°C (${tempFahrenheit.toFixed(2)}°F)</p>
+                                                <p class="temperature">Temperature: ${tempCelsius.toFixed(2)}ï¿½C (${tempFahrenheit.toFixed(2)}ï¿½F)</p>
                                                 <p>Condition: ${weatherDescription}</p>
                                                 <p>Humidity: ${humidity}%</p>
                                             </div>
@@ -230,7 +230,7 @@
                                 <div>
                                     <h3>Weather Information</h3>
                                     <p>Location: ${locationName}</p>
-                                    <p class="temperature">Temperature: ${tempCelsius.toFixed(2)}°C (${tempFahrenheit.toFixed(2)}°F)</p>
+                                    <p class="temperature">Temperature: ${tempCelsius.toFixed(2)}ï¿½C (${tempFahrenheit.toFixed(2)}ï¿½F)</p>
                                     <p>Condition: ${weatherDescription}</p>
                                     <p>Humidity: ${humidity}%</p>
                                 </div>
